@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MUKAMUMUN - Ultimate 3D Game Hub</title>
+    <style>
+        :root { --p: #00d2ff; --bg: #0f0c29; --gold: #FFD700; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
+        body { 
+            margin: 0; font-family: 'Arial', sans-serif; background: var(--bg); color: white; 
+            overflow: hidden; text-align: center; height: 100vh; width: 100vw;
+        }
+
+        /* Page Management */
+        .page { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; position: absolute; }
+        .active { display: flex; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* UI Overlays */
+        #game-info { position: fixed; top: 15px; width: 100%; display: none; justify-content: space-around; z-index: 100; }
+        .timer-badge { background: rgba(0,0,0,0.6); padding: 8px 18px; border-radius: 20px; border: 2px solid #fff; font-weight: bold; }
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 200; font-size: 2rem; color: gold; font-weight: bold; }
+
+        /* Buttons */
+        .btn { padding: 15px 30px; margin: 10px; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; background: var(--p); color: #000; width: 280px; font-size: 1.1rem; }
+        select { padding: 12px; border-radius: 12px; width: 280px; margin-bottom: 25px; font-size: 1rem; }
+
+        /* TTT Board */
+        .ttt-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 20px; width: 90vw; max-width: 320px; aspect-ratio: 1/1; }
+        .cell { background: #fff; color: #000; font-size: 2.8rem; display: flex; align-items: center; justify-content: center; border-radius: 15px; font-weight: bold; }
+
+        /* Subway Surfer UI */
+        #subway-ui { position: absolute; top: 20px; width: 100%; text-align: center; color: white; display: none; z-index: 50; pointer-events: none; }
+        .sub-score-box { font-size: 35px; font-weight: bold; color: var(--gold); text-shadow: 2px 2px 5px #000; }
+        
+        #music-btn { position: fixed; bottom: 20px; right: 20px; z-index: 300; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 50%; border: 1px solid var(--p); cursor: pointer; }
+    </style>
+</head>
+<body id="main-body">
+
+    <div id="game-info">
+        <div id="live-score">SCORE: 0</div>
+        <div class="timer-badge" id="timer">15s</div>
+    </div>
+    <div id="overlay">MATCH OVER!</div>
+    <div id="music-btn" onclick="handleMusic()">🎵</div>
+    <audio id="bgm" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
+
+    <div id="page-menu" class="page active">
+        <h1 style="font-size: 2.5rem; text-shadow: 0 0 10px var(--p);">MUKAMUMUN HUB</h1>
+        <button class="btn" onclick="openSetup('ttt')">❌ TIC TAC TOE (BOTS)</button>
+        <button class="btn" onclick="openSetup('rps')">✊ ROCK PAPER SCISSORS</button>
+        <button class="btn" style="background: #ffcc00;" onclick="startSubway()">🏃 SUBWAY SURFER 3D</button>
+    </div>
+
+    <div id="page-setup" class="page">
+        <h2>GAME SETTINGS</h2>
+        <select id="game-mode">
+            <option value="pve-easy">Player vs Bot (Easy)</option>
+            <option value="pve-hard">Player vs Bot (Hard)</option>
+            <option value="bvb-easy">Bot vs Bot (Easy)</option>
+            <option value="bvb-normal">Bot vs Bot (Normal)</option>
+            <option value="bvb-hard">Bot vs Bot (Hard)</option>
+        </select>
+        <button class="btn" onclick="beginGame()">PLAY NOW</button>
+        <button class="btn" onclick="setPage('page-menu')" style="background:#555; color:white;">BACK</button>
+    </div>
+
+    <div id="page-ttt" class="page">
+        <h2 id="turn-display">TURN</h2>
+        <div class="ttt-board" id="board"></div>
+        <button class="btn" onclick="quitGame()" style="margin-top:20px; width:120px; background:red; color:white;">QUIT</button>
+    </div>
+
+    <div id="page-rps" class="page">
+        <h2 id="rps-status">CHOOSE WEAPON</h2>
+        <div style="display:flex; gap:20px;">
+            <div onclick="playRPS('rock')" style="font-size:3.5rem; cursor:pointer;">✊</div>
+            <div onclick="playRPS('paper')" style="font-size:3.5rem; cursor:pointer;">✋</div>
+            <div onclick="playRPS('scissors')" style="font-size:3.5rem; cursor:pointer;">✌️</div>
+        </div>
+        <button class="btn" onclick="quitGame()" style="margin-top:40px; width:120px; background:red; color:white;">QUIT</button>
+    </div>
+
+    <div id="page-subway" class="page" style="padding:0;">
+        <div id="subway-ui">
+            <div class="sub-score-box">Score: <span id="sub-score">0</span></div>
+            <div style="font-size: 16px;">SWIPE or A/D to MOVE</div>
+            <h2 id="sub-msg" style="color: #ff4444;"></h2>
+            <button id="sub-quit" class="btn" onclick="quitGame()" style="width:100px; padding:10px; display:none; pointer-events: auto;">QUIT</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // --- HUB LOGIC ---
+        let config = { mode: 'pve-easy', game: '', scoreA: 0, scoreB: 0, round: 1 };
+        let state = Array(9).fill("");
+        let turn = "X", timeLeft = 15, timerId = null, isMuted = true;
+
+        function setPage(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.getElementById('game-info').style.display = (id==='page-ttt'||id==='page-rps') ? 'flex' : 'none';
+            document.getElementById('subway-ui').style.display = (id==='page-subway') ? 'block' : 'none';
+            if(id === 'page-menu') { clearInterval(timerId); if(s_renderer) stopSubway(); }
+        }
+
+        function handleMusic() {
+            const m = document.getElementById('bgm');
+            isMuted ? m.play() : m.pause(); isMuted = !isMuted;
+            document.getElementById('music-btn').innerText = isMuted ? "🎵" : "🎶";
+        }
+
+        function openSetup(g) { config.game = g; setPage('page-setup'); }
+
+        function beginGame() {
+            config.mode = document.getElementById('game-mode').value;
+            config.scoreA = 0; config.scoreB = 0; config.round = 1;
+            config.game === 'ttt' ? initTTT() : initRPS();
+        }
+
+        function quitGame() { clearInterval(timerId); setPage('page-menu'); }
+
+        function flashMsg(txt) {
+            const ov = document.getElementById('overlay');
+            ov.innerText = txt; ov.style.display = 'flex';
+            setTimeout(() => ov.style.display = 'none', 2000);
+        }
+
+        // --- TTT & RPS (Simplified for space) ---
+        function initTTT() {
+            state.fill(""); turn = "X"; updateUI();
+            const b = document.getElementById('board'); b.innerHTML = '';
+            for(let i=0; i<9; i++) {
+                let c = document.createElement('div'); c.className = 'cell';
+                c.onclick = () => { if(!config.mode.startsWith('bvb') && state[i]==="" && turn==="X") applyTTT(i); };
+                b.appendChild(c);
+            }
+            setPage('page-ttt'); startHubTimer();
+            if(config.mode.startsWith('bvb')) setTimeout(botTTT, 800);
+        }
+
+        function applyTTT(i) {
+            state[i] = turn; document.querySelectorAll('.cell')[i].innerText = turn;
+            if(!checkTTT()) {
+                turn = (turn === "X") ? "O" : "X"; updateUI(); startHubTimer();
+                if(turn === "O" || config.mode.startsWith('bvb')) setTimeout(botTTT, 800);
+            }
+        }
+
+        function updateUI() {
+            const scoreTxt = document.getElementById('live-score');
+            let nA = config.mode.startsWith('bvb') ? "BOT A" : "YOU";
+            scoreTxt.innerText = `${nA}: ${config.scoreA} | BOT B: ${config.scoreB}`;
+        }
+
+        function checkTTT() {
+            const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            let win = wins.find(l => state[l[0]] !== "" && state[l[0]] === state[l[1]] && state[l[0]] === state[l[2]]);
+            if(win) {
+                flashMsg("ROUND OVER!");
+                turn === "X" ? config.scoreA++ : config.scoreB++;
+                setTimeout(initTTT, 2000); return true;
+            }
+            if(!state.includes("")) { flashMsg("DRAW!"); setTimeout(initTTT, 2000); return true; }
+            return false;
+        }
+
+        function startHubTimer() {
+            timeLeft = 15; clearInterval(timerId);
+            timerId = setInterval(() => {
+                timeLeft--; document.getElementById('timer').innerText = timeLeft + "s";
+                if(timeLeft <= 0) { turn === "X" ? config.scoreB++ : config.scoreA++; initTTT(); }
+            }, 1000);
+        }
+
+        function botTTT() {
+            let av = state.map((v,i) => v===""?i:null).filter(v=>v!==null);
+            let move = av[Math.floor(Math.random()*av.length)];
+            if(move !== undefined) applyTTT(move);
+        }
+
+        function playRPS(u) {
+            const choices = ['rock', 'paper', 'scissors'], b = choices[Math.floor(Math.random()*3)];
+            if(u !== b) {
+                let win = ((u==='rock'&&b==='scissors')||(u==='paper'&&b==='rock')||(u==='scissors'&&b==='paper'));
+                win ? config.scoreA++ : config.scoreB++;
+                flashMsg(win ? "YOU WIN!" : "BOT WINS!");
+            } else flashMsg("DRAW!");
+            setTimeout(initRPS, 2000);
+        }
+        function initRPS() { updateUI(); setPage('page-rps'); }
+
+        // --- SUBWAY SURFER 3D LOGIC (Mobile Optimized) ---
+        let s_scene, s_camera, s_renderer, s_player, s_police, s_obstacles = [], s_buildings = [];
+        let s_laneWidth = 3.5, s_currentLane = 1, s_score = 0, s_isGameOver = false, s_speed = 0.5, s_req;
+        let s_jumping = false, s_jumpVel = 0;
+
+        function startSubway() {
+            setPage('page-subway');
+            s_isGameOver = false; s_score = 0; s_speed = 0.5; s_currentLane = 1;
+            document.getElementById('sub-score').innerText = "0";
+            document.getElementById('sub-msg').innerText = "";
+            document.getElementById('sub-quit').style.display = "none";
+            initS(); animateS();
+        }
+
+        function initS() {
+            const container = document.getElementById('page-subway');
+            s_scene = new THREE.Scene(); s_scene.background = new THREE.Color(0x87CEEB);
+            s_scene.fog = new THREE.Fog(0x87CEEB, 30, 150);
+            s_camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            s_camera.position.set(0, 6, 12); s_camera.lookAt(0, 2, 0);
+            s_renderer = new THREE.WebGLRenderer({ antialias: true });
+            s_renderer.setSize(window.innerWidth, window.innerHeight);
+            if(container.querySelector('canvas')) container.removeChild(container.querySelector('canvas'));
+            container.appendChild(s_renderer.domElement);
+            s_scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+            const sun = new THREE.DirectionalLight(0xffffff, 1); sun.position.set(5, 10, 7); s_scene.add(sun);
+            const road = new THREE.Mesh(new THREE.PlaneGeometry(15, 5000), new THREE.MeshPhongMaterial({color: 0x333333}));
+            road.rotation.x = -Math.PI / 2; s_scene.add(road);
+            s_player = createH(0x3498db, false); s_player.position.set(0, 0, 5); s_scene.add(s_player);
+            s_police = createH(0x1a1a1a, true); s_police.position.set(0, 0, 9); s_scene.add(s_police);
+            s_obstacles = []; s_buildings = [];
+            for(let i=0; i<10; i++) spawnB(i * -30);
+        }
+
+        function createH(col, isP) {
+            const g = new THREE.Group();
+            const b = new THREE.Mesh(new THREE.BoxGeometry(1, 1.4, 0.6), new THREE.MeshPhongMaterial({color: col})); b.position.y = 1.2;
+            const h = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.65, 0.65), new THREE.MeshPhongMaterial({color: 0xffdbac})); h.position.y = 2.2;
+            g.add(b, h);
+            if(isP) { const c = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.2, 0.8), new THREE.MeshPhongMaterial({color: 0x000000})); c.position.y = 2.55; g.add(c); }
+            return g;
+        }
+
+        function spawnB(z) {
+            const h = 20 + Math.random()*20;
+            const bL = new THREE.Mesh(new THREE.BoxGeometry(6, h, 10), new THREE.MeshPhongMaterial({color: 0x7f8c8d}));
+            bL.position.set(-11, h/2, z); const bR = bL.clone(); bR.position.x = 11;
+            s_scene.add(bL, bR); s_buildings.push(bL, bR);
+        }
+
+        function animateS() {
+            if (s_isGameOver) return;
+            s_req = requestAnimationFrame(animateS);
+            s_player.position.x += ((s_currentLane - 1) * s_laneWidth - s_player.position.x) * 0.15;
+            s_police.position.x += (s_player.position.x - s_police.position.x) * 0.05;
+            if (s_jumping) {
+                s_player.position.y += s_jumpVel; s_jumpVel -= 0.015;
+                if (s_player.position.y <= 0) { s_player.position.y = 0; s_jumping = false; }
+            }
+            if (Math.random() < 0.03) {
+                const obs = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 1), new THREE.MeshPhongMaterial({color: 0xffcc00}));
+                obs.position.set((Math.floor(Math.random()*3)-1)*s_laneWidth, 1, -150);
+                s_scene.add(obs); s_obstacles.push(obs);
+            }
+            for (let i = s_obstacles.length - 1; i >= 0; i--) {
+                s_obstacles[i].position.z += s_speed;
+                if (Math.abs(s_obstacles[i].position.x - s_player.position.x) < 1.2 && Math.abs(s_obstacles[i].position.z - s_player.position.z) < 1.5 && s_player.position.y < 1.2) {
+                    s_isGameOver = true; 
+                    document.getElementById('sub-msg').innerText = "GAME OVER";
+                    document.getElementById('sub-quit').style.display = "inline-block";
+                }
+                if (s_obstacles[i].position.z > 20) { s_scene.remove(s_obstacles[i]); s_obstacles.splice(i, 1); s_score += 10; document.getElementById('sub-score').innerText = s_score; s_speed += 0.001; }
+            }
+            s_buildings.forEach(b => { b.position.z += s_speed; if(b.position.z > 40) b.position.z = -260; });
+            s_renderer.render(s_scene, s_camera);
+        }
+
+        function stopSubway() { cancelAnimationFrame(s_req); }
+
+        // --- CONTROLS (PC & MOBILE) ---
+        let touchStartX = 0;
+        window.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+        window.addEventListener('touchend', e => {
+            let diff = e.changedTouches[0].clientX - touchStartX;
+            if (Math.abs(diff) > 30) {
+                if (diff > 0 && s_currentLane < 2) s_currentLane++;
+                else if (diff < 0 && s_currentLane > 0) s_currentLane--;
+            } else if (!s_jumping) { s_jumping = true; s_jumpVel = 0.28; }
+        });
+
+        window.addEventListener('keydown', e => {
+            if ((e.code==='ArrowLeft'||e.code==='KeyA') && s_currentLane > 0) s_currentLane--;
+            if ((e.code==='ArrowRight'||e.code==='KeyD') && s_currentLane < 2) s_currentLane++;
+            if (e.code==='Space' && !s_jumping) { s_jumping = true; s_jumpVel = 0.28; }
+        });
+    </script>
+</body>
+</html>
